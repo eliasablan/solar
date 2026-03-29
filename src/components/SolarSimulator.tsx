@@ -108,18 +108,12 @@ export default function SolarSimulator() {
         </div>
 
         <div className="absolute bottom-4 right-4 flex flex-col gap-4 items-end">
-          {/* El TimeControls va sobre la StatusCard en escritorio */}
           <TimeControls 
-            className="mb-2"
             isPaused={isPaused} 
             setIsPaused={setIsPaused} 
             timeScale={timeScale} 
             setTimeScale={setTimeScale} 
             simTime={simTime} 
-          />
-          <StatusCard 
-            timeScale={timeScale}
-            simTime={simTime}
           />
         </div>
 

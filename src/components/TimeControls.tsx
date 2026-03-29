@@ -20,10 +20,26 @@ export function TimeControls({ isPaused, setIsPaused, timeScale, setTimeScale, s
     setDirection(timeScale > 0 ? 1 : -1);
   }, [timeScale]);
 
+  // We define fixed speed options for the quick-access buttons
+  const speedPresets = [
+    { label: "1D/s", value: 0.00222, sliderPos: 1.3 },
+    { label: "1W/s", value: 0.0155, sliderPos: 2.5 },
+    { label: "1M/s", value: 0.0675, sliderPos: 4.0 },
+    { label: "6M/s", value: 0.4052, sliderPos: 7.0 },
+    { label: "1Y/s", value: 0.8104, sliderPos: 8.5 },
+    { label: "5Y/s", value: 4.052, sliderPos: 10.0 }
+  ];
+
   const handleSliderChange = (val: number) => {
     setSpeedSlider(val);
+    // Cubic scale for more precision at low speeds
     const newBaseScale = Math.pow(val / 5, 3); 
     setTimeScale(newBaseScale * direction);
+  };
+
+  const setPreset = (preset: typeof speedPresets[0]) => {
+    setSpeedSlider(preset.sliderPos);
+    setTimeScale(preset.value * direction);
   };
 
   const toggleDirection = (newDir: number) => {
@@ -54,23 +70,38 @@ export function TimeControls({ isPaused, setIsPaused, timeScale, setTimeScale, s
     <div className={className}>
       <Card title="Simulation Time" className="w-full md:w-80">
         <div className="flex flex-col gap-4">
-          <div className="flex justify-between items-center bg-gray-900/50 p-2 rounded">
-            <span className="text-[10px] text-gray-500 uppercase font-bold">Current Epoch</span>
+          <div className="flex justify-between items-center bg-gray-900/50 p-2 rounded border border-gray-800">
+            <span className="text-[10px] text-gray-500 uppercase font-bold tracking-tighter">Current Epoch</span>
             <span className="text-blue-400 font-bold">{formatTime(simTime)}</span>
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-3">
             <div className="flex justify-between text-[10px]">
               <span className="text-gray-500 uppercase">Speed Control</span>
               <span className="text-orange-400 font-bold">{direction > 0 ? 'FORWARD' : 'REVERSE'}</span>
             </div>
+            
+            {/* Quick Presets Grid */}
+            <div className="grid grid-cols-3 gap-1 px-1">
+              {speedPresets.map(preset => (
+                <button
+                  key={preset.label}
+                  onClick={() => setPreset(preset)}
+                  className={`text-[9px] py-1 rounded transition-colors ${Math.abs(Math.abs(timeScale) - preset.value) < 0.001 ? 'bg-blue-600 font-bold' : 'bg-gray-800 hover:bg-gray-700'}`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+
             <input 
               type="range" min="0.1" max="10" step="0.1" 
               value={speedMultiplier}
               onChange={(e) => handleSliderChange(parseFloat(e.target.value))}
-              className="w-full accent-blue-500 h-1.5 cursor-pointer"
+              className="w-full accent-blue-500 h-1 cursor-pointer"
             />
-            <div className="text-[10px] text-gray-500 text-center italic mt-1 border-t border-gray-800/50 pt-1">
+            
+            <div className="text-[10px] text-gray-500 text-center italic opacity-70">
               {getEquivalence(timeScale)}
             </div>
           </div>

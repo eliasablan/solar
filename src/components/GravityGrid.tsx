@@ -29,17 +29,16 @@ const VERTEX_SHADER = `
       
       float dist = distance(vec2(position.x, position.y), vec2(bodyPos.x, -bodyPos.z));
       
-      // FALLOFF DINÁMICO: Reducimos el suavizado (+5.0 en lugar de +20.0) para evitar fondos planos
+      // RESTAURADO: Falloff suave (+5.0) y exponente 1.8 para pozos orgánicos
       float isSun = mass > 500000.0 ? 1.0 : 0.0;
       float pullFactor = mix(3.0, 0.1, isSun); 
       
       float displacement = (mass * pullFactor) / (pow(dist, 1.8) + 5.0);
       
-      // Eliminamos el clamp agresivo para que el pozo sea profundo y curvo, no plano
       totalDisplacement += displacement;
     }
 
-    // Limitamos el desplazamiento total de forma suave solo para evitar errores de renderizado extremos
+    // Limitamos el desplazamiento total de forma suave
     totalDisplacement = min(totalDisplacement, 150.0);
 
     newPosition.z -= totalDisplacement;
