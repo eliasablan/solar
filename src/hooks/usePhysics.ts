@@ -36,10 +36,10 @@ export function usePhysics() {
       const maxDt = 1 / 30;
       const dt = Math.min(deltaTimeMs / 1000, maxDt) * timeScale;
       
-      const numSteps = Math.ceil(timeScale / 0.1) || 1;
+      const numSteps = Math.ceil(Math.abs(timeScale) / 0.1) || 1;
       const subDt = dt / numSteps;
 
-      if (subDt > 0) {
+      if (subDt !== 0) {
         let currentBodies = bodiesRef.current;
         let currentAccels = accelerationsRef.current;
         let newExplosions: THREE.Vector3[] = [];

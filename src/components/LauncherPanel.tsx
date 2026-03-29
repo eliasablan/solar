@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import * as THREE from 'three';
 import { CelestialBody } from '../types';
+import { Card } from './ui/Card';
 
 interface Props {
   isAiming: boolean;
@@ -31,8 +32,6 @@ export function LauncherPanel({
     const aRad = (a * Math.PI) / 180;
     const eRad = (e * Math.PI) / 180;
     
-    // Convert spherical to Cartesian
-    // Elevation is angle from XZ plane
     const y = s * Math.sin(eRad);
     const x = s * Math.cos(eRad) * Math.cos(aRad);
     const z = s * Math.cos(eRad) * Math.sin(aRad);
@@ -67,99 +66,99 @@ export function LauncherPanel({
   const mass = volume * density;
 
   return (
-    <div className="absolute bottom-4 left-4 bg-black/80 text-white p-4 rounded-lg w-80 shadow-lg border border-gray-700 font-mono text-sm backdrop-blur-sm z-10 pointer-events-auto max-h-[80vh] overflow-y-auto">
-      <h2 className="text-lg font-bold mb-4 border-b border-gray-600 pb-2">Asteroid Launcher</h2>
-      
-      <div className="space-y-4">
-        <div>
+    <div className="absolute bottom-4 left-4 z-10">
+      <Card title="Asteroid Launcher" className="w-80 max-h-[80vh] overflow-y-auto">
+        <div className="space-y-4">
+          <div>
+            <button
+              onClick={() => setIsAiming(!isAiming)}
+              className={`w-full py-2 px-4 rounded font-bold ${isAiming ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+            >
+              {isAiming ? 'Click Scene to Set Origin' : '1. Set Launch Origin'}
+            </button>
+            {launchOrigin && (
+              <div className="text-xs text-gray-400 mt-1">
+                Origin: {launchOrigin.x.toFixed(1)}, {launchOrigin.y.toFixed(1)}, {launchOrigin.z.toFixed(1)}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block mb-1">Radius: {radius.toFixed(1)}</label>
+            <input
+              type="range" min="0.2" max="10" step="0.1" value={radius}
+              onChange={(e) => setRadius(parseFloat(e.target.value))}
+              className="w-full"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-1">Density: {density.toFixed(1)} g/cm³</label>
+            <input
+              type="range" min="0.5" max="15" step="0.1" value={density}
+              onChange={(e) => setDensity(parseFloat(e.target.value))}
+              className="w-full"
+            />
+            <div className="text-xs text-gray-400 mt-1">Mass: {mass.toFixed(1)}</div>
+          </div>
+
+          <div>
+            <label className="block mb-1">Velocity: {speed} units/s</label>
+            <input
+              type="range" min="0" max="500" step="5" value={speed}
+              onChange={(e) => {
+                const val = parseFloat(e.target.value);
+                setSpeed(val);
+                updateVelocity(val, azimuth, elevation);
+              }}
+              className="w-full"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-1">Direction (Azimuth): {azimuth}°</label>
+            <input
+              type="range" min="0" max="360" step="1" value={azimuth}
+              onChange={(e) => {
+                const val = parseFloat(e.target.value);
+                setAzimuth(val);
+                updateVelocity(speed, val, elevation);
+              }}
+              className="w-full"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-1">Direction (Elevation): {elevation}°</label>
+            <input
+              type="range" min="-90" max="90" step="1" value={elevation}
+              onChange={(e) => {
+                const val = parseFloat(e.target.value);
+                setElevation(val);
+                updateVelocity(speed, azimuth, val);
+              }}
+              className="w-full"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-1">Color</label>
+            <input
+              type="color" value={color}
+              onChange={(e) => setColor(e.target.value)}
+              className="w-full h-8 cursor-pointer rounded"
+            />
+          </div>
+
           <button
-            onClick={() => setIsAiming(!isAiming)}
-            className={`w-full py-2 px-4 rounded font-bold ${isAiming ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+            onClick={handleLaunch}
+            disabled={!launchOrigin}
+            className={`w-full py-2 px-4 rounded font-bold ${launchOrigin ? 'bg-red-600 hover:bg-red-500' : 'bg-gray-600 opacity-50 cursor-not-allowed'}`}
           >
-            {isAiming ? 'Click Scene to Set Origin' : '1. Set Launch Origin'}
+            FIRE ASTEROID
           </button>
-          {launchOrigin && (
-            <div className="text-xs text-gray-400 mt-1">
-              Origin: {launchOrigin.x.toFixed(1)}, {launchOrigin.y.toFixed(1)}, {launchOrigin.z.toFixed(1)}
-            </div>
-          )}
         </div>
-
-        <div>
-          <label className="block mb-1">Radius: {radius.toFixed(1)}</label>
-          <input
-            type="range" min="0.2" max="10" step="0.1" value={radius}
-            onChange={(e) => setRadius(parseFloat(e.target.value))}
-            className="w-full"
-          />
-        </div>
-
-        <div>
-          <label className="block mb-1">Density: {density.toFixed(1)} g/cm³</label>
-          <input
-            type="range" min="0.5" max="15" step="0.1" value={density}
-            onChange={(e) => setDensity(parseFloat(e.target.value))}
-            className="w-full"
-          />
-          <div className="text-xs text-gray-400 mt-1">Mass: {mass.toFixed(1)}</div>
-        </div>
-
-        <div>
-          <label className="block mb-1">Velocity: {speed} units/s</label>
-          <input
-            type="range" min="0" max="500" step="5" value={speed}
-            onChange={(e) => {
-              const val = parseFloat(e.target.value);
-              setSpeed(val);
-              updateVelocity(val, azimuth, elevation);
-            }}
-            className="w-full"
-          />
-        </div>
-
-        <div>
-          <label className="block mb-1">Direction (Azimuth): {azimuth}°</label>
-          <input
-            type="range" min="0" max="360" step="1" value={azimuth}
-            onChange={(e) => {
-              const val = parseFloat(e.target.value);
-              setAzimuth(val);
-              updateVelocity(speed, val, elevation);
-            }}
-            className="w-full"
-          />
-        </div>
-
-        <div>
-          <label className="block mb-1">Direction (Elevation): {elevation}°</label>
-          <input
-            type="range" min="-90" max="90" step="1" value={elevation}
-            onChange={(e) => {
-              const val = parseFloat(e.target.value);
-              setElevation(val);
-              updateVelocity(speed, azimuth, val);
-            }}
-            className="w-full"
-          />
-        </div>
-
-        <div>
-          <label className="block mb-1">Color</label>
-          <input
-            type="color" value={color}
-            onChange={(e) => setColor(e.target.value)}
-            className="w-full h-8 cursor-pointer rounded"
-          />
-        </div>
-
-        <button
-          onClick={handleLaunch}
-          disabled={!launchOrigin}
-          className={`w-full py-2 px-4 rounded font-bold ${launchOrigin ? 'bg-red-600 hover:bg-red-500' : 'bg-gray-600 opacity-50 cursor-not-allowed'}`}
-        >
-          FIRE ASTEROID
-        </button>
-      </div>
+      </Card>
     </div>
   );
 }

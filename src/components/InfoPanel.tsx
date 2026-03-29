@@ -1,4 +1,5 @@
 import { CelestialBody } from '../types';
+import { Card } from './ui/Card';
 
 interface Props {
   bodies: CelestialBody[];
@@ -18,19 +19,17 @@ export function InfoPanel({ bodies, selectedBody, onSelectBody, setCameraMode }:
   };
 
   return (
-    <div className="absolute top-4 right-4 flex flex-col gap-4 z-10 pointer-events-none">
-      <div className="bg-black/80 text-white p-4 rounded-lg shadow-lg border border-gray-700 font-mono text-sm backdrop-blur-sm pointer-events-auto min-w-[200px]">
-        <h3 className="font-bold border-b border-gray-600 pb-1 mb-2">Census</h3>
+    <div className="absolute top-4 right-4 flex flex-col gap-4 z-10 pointer-events-none w-64">
+      <Card title="Census" className="w-full">
         <div className="flex justify-between"><span>Planets/Stars:</span> <span>{planets}</span></div>
         <div className="flex justify-between"><span>Asteroids:</span> <span>{asteroids}</span></div>
         <div className="flex justify-between"><span>Debris:</span> <span>{debris}</span></div>
         <div className="flex justify-between font-bold mt-1 pt-1 border-t border-gray-800">
           <span>Total:</span> <span>{bodies.length}</span>
         </div>
-      </div>
+      </Card>
 
-      <div className="bg-black/80 text-white p-4 rounded-lg shadow-lg border border-gray-700 font-mono text-sm backdrop-blur-sm pointer-events-auto min-w-[200px] max-h-[40vh] overflow-y-auto">
-        <h3 className="font-bold border-b border-gray-600 pb-1 mb-2">Bodies List</h3>
+      <Card title="Bodies List" className="w-full max-h-[40vh] overflow-y-auto">
         <div className="space-y-2">
           {bodies.length === 0 && <div className="text-gray-500 italic">No bodies detected</div>}
           
@@ -78,11 +77,10 @@ export function InfoPanel({ bodies, selectedBody, onSelectBody, setCameraMode }:
             </div>
           )}
         </div>
-      </div>
+      </Card>
 
       {selectedBody && (
-        <div className="bg-black/80 text-white p-4 rounded-lg shadow-lg border border-gray-700 font-mono text-sm backdrop-blur-sm pointer-events-auto min-w-[200px]">
-          <h3 className="font-bold border-b border-gray-600 pb-1 mb-2 capitalize">{selectedBody.name}</h3>
+        <Card title={selectedBody.name} className="w-full">
           <div className="flex justify-between">
             <span className="text-gray-400">Type:</span> 
             <span className="capitalize">{selectedBody.type}</span>
@@ -107,7 +105,7 @@ export function InfoPanel({ bodies, selectedBody, onSelectBody, setCameraMode }:
             <span className="text-gray-400">Pos Z:</span> 
             <span>{selectedBody.position.z.toFixed(1)}</span>
           </div>
-        </div>
+        </Card>
       )}
     </div>
   );

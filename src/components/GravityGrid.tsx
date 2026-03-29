@@ -27,23 +27,26 @@ const VERTEX_SHADER = `
       vec3 bodyPos = uBodyPositions[i];
       float mass = uBodyMasses[i];
       
-      // Calculate distance in XZ plane
       float dist = distance(vec2(position.x, position.y), vec2(bodyPos.x, -bodyPos.z));
       
-      // Enhanced gravitational pull: logarithmic falloff creates steep wells that don't spread too far
-      // We scale the mass influence so smaller planets are still visible without the Sun consuming everything
-      float pullFactor = mass > 500000.0 ? 0.01 : 0.8; 
-      float displacement = (mass * pullFactor) / (pow(dist, 1.4) + 1.0);
+      // FALLOFF DINÁMICO: Reducimos el suavizado (+5.0 en lugar de +20.0) para evitar fondos planos
+      float isSun = mass > 500000.0 ? 1.0 : 0.0;
+      float pullFactor = mix(3.0, 0.1, isSun); 
       
-      // Allow deep wells for stars, shallower for planets
-      float maxDepth = mass > 500000.0 ? 45.0 : 15.0;
-      totalDisplacement += min(displacement, maxDepth);
+      float displacement = (mass * pullFactor) / (pow(dist, 1.8) + 5.0);
+      
+      // Eliminamos el clamp agresivo para que el pozo sea profundo y curvo, no plano
+      totalDisplacement += displacement;
     }
+
+    // Limitamos el desplazamiento total de forma suave solo para evitar errores de renderizado extremos
+    totalDisplacement = min(totalDisplacement, 150.0);
 
     newPosition.z -= totalDisplacement;
     vDisplacement = totalDisplacement;
     
     gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
+    gl_PointSize = 1.5; // Puntos más pequeños y elegantes
   }
 `;
 
@@ -52,27 +55,28 @@ const FRAGMENT_SHADER = `
   varying vec2 vUv;
 
   void main() {
-    // Grid line effect
-    float grid = sin(vUv.x * 100.0) * sin(vUv.y * 100.0);
-    grid = step(0.98, grid);
+    // REJILLA DE LÍNEAS FINAS: Dibujamos líneas continuas en lugar de puntos
+    float lineX = step(0.99, sin(vUv.x * 80.0));
+    float lineY = step(0.99, sin(vUv.y * 80.0));
+    float gridLines = max(lineX, lineY);
 
-    // Deep space blue to bright cyan core
-    vec3 baseColor = vec3(0.0, 0.1, 0.4); 
-    vec3 glowColor = vec3(0.0, 0.6, 1.0); 
+    // Colores originales azul/cian
+    vec3 baseColor = vec3(0.0, 0.05, 0.3); 
+    vec3 glowColor = vec3(0.0, 0.7, 1.0); 
     
-    // Smooth transition based on depth
-    float depthFactor = clamp(vDisplacement / 20.0, 0.0, 1.0);
+    float depthFactor = clamp(vDisplacement / 30.0, 0.0, 1.0);
     vec3 color = mix(baseColor, glowColor, depthFactor);
     
-    // Add glowing grid lines
-    color += grid * 0.4;
+    // Añadir líneas de rejilla sutiles
+    color += gridLines * 0.2;
 
-    gl_FragColor = vec4(color, 0.4 + (depthFactor * 0.4));
+    gl_FragColor = vec4(color, 0.3 + (depthFactor * 0.3));
   }
 `;
 
 export function GravityGrid({ bodies }: Props) {
   const meshRef = useRef<THREE.Mesh>(null);
+  const pointsRef = useRef<THREE.Points>(null);
   
   const uniforms = useMemo(() => ({
     uTime: { value: 0 },
@@ -82,12 +86,11 @@ export function GravityGrid({ bodies }: Props) {
   }), []);
 
   useFrame((state) => {
-    if (!meshRef.current) return;
+    if (!meshRef.current || !pointsRef.current) return;
     
-    const shaderMaterial = meshRef.current.material as THREE.ShaderMaterial;
-    shaderMaterial.uniforms.uTime.value = state.clock.getElapsedTime();
+    const mat = meshRef.current.material as THREE.ShaderMaterial;
+    mat.uniforms.uTime.value = state.clock.getElapsedTime();
     
-    // Send only the heaviest bodies or first 20 to the shader for performance
     const activeBodies = bodies
       .filter(b => b.isAlive)
       .sort((a, b) => b.mass - a.mass)
@@ -101,26 +104,41 @@ export function GravityGrid({ bodies }: Props) {
       masses[i] = body.mass;
     });
 
-    shaderMaterial.uniforms.uBodyPositions.value = positions;
-    shaderMaterial.uniforms.uBodyMasses.value = masses;
-    shaderMaterial.uniforms.uBodyCount.value = activeBodies.length;
+    mat.uniforms.uBodyPositions.value = positions;
+    mat.uniforms.uBodyMasses.value = masses;
+    mat.uniforms.uBodyCount.value = activeBodies.length;
+    
+    (pointsRef.current.material as THREE.ShaderMaterial).uniforms = mat.uniforms;
   });
 
+  // Resolución aumentada para una rejilla más densa y suave
+  const geometry = useMemo(() => new THREE.PlaneGeometry(650, 650, 200, 200), []);
+
   return (
-    <mesh 
-      ref={meshRef} 
-      rotation={[-Math.PI / 2, 0, 0]} 
-      position={[0, -2, 0]} // Brought much closer to the orbital plane
-    >
-      <planeGeometry args={[650, 650, 128, 128]} />
-      <shaderMaterial
-        vertexShader={VERTEX_SHADER}
-        fragmentShader={FRAGMENT_SHADER}
-        uniforms={uniforms}
-        transparent={true}
-        wireframe={false} // Solid mesh with drawn grid lines looks better
-        depthWrite={false}
-      />
-    </mesh>
+    <group rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}>
+      {/* El tejido (malla con líneas) */}
+      <mesh ref={meshRef} geometry={geometry}>
+        <shaderMaterial
+          vertexShader={VERTEX_SHADER}
+          fragmentShader={FRAGMENT_SHADER}
+          uniforms={uniforms}
+          transparent={true}
+          wireframe={false}
+          depthWrite={false}
+        />
+      </mesh>
+      
+      {/* Las partículas (estrellas de la rejilla) */}
+      <points ref={pointsRef} geometry={geometry}>
+        <shaderMaterial
+          vertexShader={VERTEX_SHADER}
+          fragmentShader={FRAGMENT_SHADER}
+          uniforms={uniforms}
+          transparent={true}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </points>
+    </group>
   );
 }
