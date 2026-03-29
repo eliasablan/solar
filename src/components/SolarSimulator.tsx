@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, Suspense, useCallback } from 'react';
 import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
 import { usePhysics } from '../hooks/usePhysics';
@@ -31,29 +31,31 @@ export default function SolarSimulator() {
   const [launchOrigin, setLaunchOrigin] = useState<THREE.Vector3 | null>(null);
   const [launchVelocity, setLaunchVelocity] = useState<THREE.Vector3>(new THREE.Vector3(50, 0, 0));
 
-  const handleSelectBody = (body: CelestialBody | null) => {
+  const handleSelectBody = useCallback((body: CelestialBody | null) => {
     setSelectedBody(body);
     if (!body && cameraMode === 'follow') {
       setCameraMode('free');
     }
-  };
+  }, [cameraMode]);
 
   return (
     <div className="w-full h-screen bg-black overflow-hidden relative">
-      <Canvas camera={{ position: [0, 150, 300], fov: 45 }}>
-        <Scene3D
-          bodies={bodies}
-          explosions={explosions}
-          selectedBody={selectedBody}
-          onSelectBody={handleSelectBody}
-          isAiming={isAiming}
-          launchOrigin={launchOrigin}
-          launchVelocity={launchVelocity}
-          setLaunchOrigin={setLaunchOrigin}
-          cameraMode={cameraMode}
-          timeScale={timeScale}
-          isPaused={isPaused}
-        />
+      <Canvas camera={{ position: [0, 150, 300], fov: 45, far: 5000 }}>
+        <Suspense fallback={null}>
+          <Scene3D
+            bodies={bodies}
+            explosions={explosions}
+            selectedBody={selectedBody}
+            onSelectBody={handleSelectBody}
+            isAiming={isAiming}
+            launchOrigin={launchOrigin}
+            launchVelocity={launchVelocity}
+            setLaunchOrigin={setLaunchOrigin}
+            cameraMode={cameraMode}
+            timeScale={timeScale}
+            isPaused={isPaused}
+          />
+        </Suspense>
       </Canvas>
 
       <LauncherPanel

@@ -1,4 +1,4 @@
-import { useRef, Suspense } from 'react';
+import { useRef, Suspense, memo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
@@ -13,13 +13,14 @@ interface Props {
 }
 
 // Componente que asume que la textura existe y la carga síncronamente (vía Suspense)
-function TexturedMaterial({ body }: { body: CelestialBody }) {
+const TexturedMaterial = memo(function TexturedMaterial({ body }: { body: CelestialBody }) {
   const texture = useTexture(body.texturePath!);
   texture.colorSpace = THREE.SRGBColorSpace;
   
   // Condicionalmente carga el anillo si existe
   const ringTexturePath = body.ringTexturePath || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='; // transparent 1x1 base64 as fallback
   const ringTexture = useTexture(ringTexturePath);
+  
   if (body.ringTexturePath) {
       ringTexture.colorSpace = THREE.SRGBColorSpace;
   }
@@ -44,7 +45,7 @@ function TexturedMaterial({ body }: { body: CelestialBody }) {
         )}
       </mesh>
 
-      {body.hasRings && (
+      {body.hasRings ? (
         <mesh rotation={[-Math.PI / 2.2, 0, 0]}>
           <ringGeometry args={[body.radius * 1.4, body.radius * 2.4, 128]} />
           <meshStandardMaterial 
@@ -55,13 +56,13 @@ function TexturedMaterial({ body }: { body: CelestialBody }) {
             opacity={0.6} 
           />
         </mesh>
-      )}
+      ) : null}
     </>
   );
-}
+});
 
 // Componente de respaldo por si falla la textura o no tiene
-function PlainMaterial({ body }: { body: CelestialBody }) {
+const PlainMaterial = memo(function PlainMaterial({ body }: { body: CelestialBody }) {
   const isStar = body.type === 'star';
   return (
     <>
@@ -79,18 +80,17 @@ function PlainMaterial({ body }: { body: CelestialBody }) {
           />
         )}
       </mesh>
-
-      {body.hasRings && (
+      {body.hasRings ? (
         <mesh rotation={[-Math.PI / 2.2, 0, 0]}>
           <ringGeometry args={[body.radius * 1.5, body.radius * 2.5, 64]} />
           <meshStandardMaterial color={body.color} side={THREE.DoubleSide} transparent opacity={0.5} />
         </mesh>
-      )}
+      ) : null}
     </>
   );
-}
+});
 
-export function PlanetMesh({ body, onClick, timeScale, isPaused }: Props) {
+export const PlanetMesh = memo(function PlanetMesh({ body, onClick, timeScale, isPaused }: Props) {
   const groupRef = useRef<THREE.Group>(null);
 
   useFrame((state, delta) => {
@@ -104,13 +104,15 @@ export function PlanetMesh({ body, onClick, timeScale, isPaused }: Props) {
     }
   });
 
+  const handlePointerClick = (e: any) => {
+    e.stopPropagation();
+    onClick?.(body);
+  };
+
   return (
     <group 
       ref={groupRef}
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick?.(body);
-      }}
+      onClick={handlePointerClick}
     >
       {body.texturePath ? (
         <TextureErrorBoundary fallback={<PlainMaterial body={body} />}>
@@ -123,4 +125,4 @@ export function PlanetMesh({ body, onClick, timeScale, isPaused }: Props) {
       )}
     </group>
   );
-}
+});

@@ -1,4 +1,4 @@
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, memo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { CelestialBody } from '../types';
@@ -8,12 +8,12 @@ interface Props {
   onClick?: (body: CelestialBody) => void;
 }
 
-export function AsteroidMesh({ body, onClick }: Props) {
+export const AsteroidMesh = memo(function AsteroidMesh({ body, onClick }: Props) {
   const meshRef = useRef<THREE.Mesh>(null);
 
   useFrame(() => {
     if (meshRef.current) {
-      meshRef.current.position.copy(body.position);
+      meshRef.current.position.set(body.position.x, body.position.y, body.position.z);
     }
   });
 
@@ -25,15 +25,17 @@ export function AsteroidMesh({ body, onClick }: Props) {
     emissiveIntensity: body.type === 'debris' ? 0.2 : 0
   }), [body.color, body.type]);
 
+  const handlePointerClick = (e: any) => {
+    e.stopPropagation();
+    onClick?.(body);
+  };
+
   return (
     <mesh
       ref={meshRef}
       geometry={geometry}
       material={material}
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick?.(body);
-      }}
+      onClick={handlePointerClick}
     />
   );
-}
+});

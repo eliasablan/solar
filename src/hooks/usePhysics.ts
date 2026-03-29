@@ -53,11 +53,19 @@ export function usePhysics() {
 
         // Garbage collection: remove asteroids/debris that fly too far (e.g., > 2000 units)
         const MAX_DIST_SQ = 2000 * 2000;
-        const validBodies = currentBodies.filter(b => 
-          b.type === 'star' || b.type === 'planet' || b.position.lengthSq() < MAX_DIST_SQ
-        );
+        const validBodies: CelestialBody[] = [];
+        let bodyCountChanged = false;
+
+        for (let i = 0; i < currentBodies.length; i++) {
+          const b = currentBodies[i];
+          if (b.type === 'star' || b.type === 'planet' || b.position.lengthSq() < MAX_DIST_SQ) {
+            validBodies.push(b);
+          } else {
+            bodyCountChanged = true;
+          }
+        }
         
-        if (validBodies.length !== currentBodies.length) {
+        if (bodyCountChanged) {
           currentBodies = validBodies;
           currentAccels = computeAccelerations(currentBodies);
         }
@@ -66,7 +74,13 @@ export function usePhysics() {
         accelerationsRef.current = currentAccels;
         timeRef.current += dt;
 
-        setBodies(currentBodies.map(b => ({...b, position: b.position.clone()})));
+        // Combine map and cloning in one pass
+        const updatedBodies = new Array(currentBodies.length);
+        for (let i = 0; i < currentBodies.length; i++) {
+          const b = currentBodies[i];
+          updatedBodies[i] = { ...b, position: b.position.clone() };
+        }
+        setBodies(updatedBodies);
         
         if (newExplosions.length > 0) {
           const now = Date.now();

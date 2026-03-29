@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, memo } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Stars } from '@react-three/drei';
 import * as THREE from 'three';
@@ -24,7 +24,7 @@ interface Props {
   isPaused: boolean;
 }
 
-export function Scene3D({
+export const Scene3D = memo(function Scene3D({
   bodies,
   explosions,
   selectedBody,
@@ -58,9 +58,6 @@ export function Scene3D({
       const body = bodies.find(b => b.id === selectedBody.id);
       if (body && controlsRef.current) {
         controlsRef.current.target.copy(body.position);
-        
-        // Keep camera at a fixed relative distance if possible, or just look at it
-        // We'll just update the target, OrbitControls will handle the rest
       }
     }
   });
@@ -84,23 +81,18 @@ export function Scene3D({
   };
 
   // Trajectory preview
-  let trajectoryPoints: THREE.Vector3[] = [];
-  if (isAiming && launchOrigin) {
-    const previewBody: CelestialBody = {
-      id: 'preview',
-      name: 'Preview',
-      position: launchOrigin,
-      velocity: launchVelocity,
-      mass: 1,
-      radius: 1,
-      type: 'asteroid',
-      density: 3,
-      color: '#ffffff',
-      isAlive: true
-    };
-    // computeTrajectory expects other bodies to act on it
-    trajectoryPoints = computeTrajectory(previewBody, bodies, 200, 1 / 30);
-  }
+  const trajectoryPoints = (isAiming && launchOrigin) ? computeTrajectory({
+    id: 'preview',
+    name: 'Preview',
+    position: launchOrigin,
+    velocity: launchVelocity,
+    mass: 1,
+    radius: 1,
+    type: 'asteroid',
+    density: 3,
+    color: '#ffffff',
+    isAlive: true
+  }, bodies, 200, 1 / 30) : [];
 
   const minZoomDist = selectedBody ? selectedBody.radius * 2.5 : 10;
 
@@ -112,7 +104,7 @@ export function Scene3D({
         enableDamping 
         dampingFactor={0.05} 
         minDistance={minZoomDist}
-        maxDistance={1000}
+        maxDistance={4000}
       />
       
       <ambientLight intensity={0.6} />
@@ -145,16 +137,16 @@ export function Scene3D({
         <ExplosionEffect key={exp.id} position={exp.position} timeCreated={exp.time} />
       ))}
 
-      {isAiming && launchOrigin && (
+      {isAiming && launchOrigin ? (
         <mesh position={launchOrigin}>
           <sphereGeometry args={[2, 16, 16]} />
           <meshBasicMaterial color="#ffffff" wireframe />
         </mesh>
-      )}
+      ) : null}
 
-      {trajectoryPoints.length > 0 && (
+      {trajectoryPoints.length > 0 ? (
         <TrajectoryLine points={trajectoryPoints} color="#00ff00" />
-      )}
+      ) : null}
     </>
   );
-}
+});
