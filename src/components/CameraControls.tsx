@@ -5,12 +5,13 @@ interface Props {
   cameraMode: 'free' | 'follow' | 'top';
   setCameraMode: (mode: 'free' | 'follow' | 'top') => void;
   selectedBody: CelestialBody | null;
+  className?: string;
 }
 
-export function CameraControls({ cameraMode, setCameraMode, selectedBody }: Props) {
+export function CameraControls({ cameraMode, setCameraMode, selectedBody, className = "" }: Props) {
   return (
-    <div className="absolute top-4 left-4 z-10">
-      <Card title="Camera" className="w-64">
+    <div className={className}>
+      <Card title="Camera" className="w-full md:w-64">
         <div className="flex flex-col gap-2">
           <button
             onClick={() => setCameraMode('free')}

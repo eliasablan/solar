@@ -6,9 +6,10 @@ interface Props {
   selectedBody: CelestialBody | null;
   onSelectBody: (body: CelestialBody | null) => void;
   setCameraMode: (mode: 'free' | 'follow' | 'top') => void;
+  className?: string;
 }
 
-export function InfoPanel({ bodies, selectedBody, onSelectBody, setCameraMode }: Props) {
+export function InfoPanel({ bodies, selectedBody, onSelectBody, setCameraMode, className = "" }: Props) {
   const planets = bodies.filter(b => b.type === 'planet' || b.type === 'star').length;
   const asteroids = bodies.filter(b => b.type === 'asteroid').length;
   const debris = bodies.filter(b => b.type === 'debris').length;
@@ -19,7 +20,7 @@ export function InfoPanel({ bodies, selectedBody, onSelectBody, setCameraMode }:
   };
 
   return (
-    <div className="absolute top-4 right-4 flex flex-col gap-4 z-10 pointer-events-none w-64">
+    <div className={`flex flex-col gap-4 w-full md:w-64 ${className}`}>
       <Card title="Census" className="w-full">
         <div className="flex justify-between"><span>Planets/Stars:</span> <span>{planets}</span></div>
         <div className="flex justify-between"><span>Asteroids:</span> <span>{asteroids}</span></div>
