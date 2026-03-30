@@ -14,6 +14,7 @@ function createPlanet(
   distance: number,
   radius: number,
   color: string,
+  rotationPeriod: number, // in Earth Days
   hasRings = false
 ): CelestialBody {
   // v = sqrt(G * M_sun / r)
@@ -43,7 +44,8 @@ function createPlanet(
     isAlive: true,
     hasRings,
     texturePath: textureMap[name.toLowerCase()],
-    ringTexturePath: undefined
+    ringTexturePath: undefined,
+    rotationPeriod
   };
 }
 
@@ -58,14 +60,16 @@ INITIAL_BODIES.push({
   density: SUN_MASS / (Math.PI * 4/3 * Math.pow(8, 3)),
   color: '#FDB813',
   isAlive: true,
-  texturePath: 'https://raw.githubusercontent.com/khushi-1907/SolarSystem/master/textures/sun.jpg'
+  texturePath: 'https://raw.githubusercontent.com/khushi-1907/SolarSystem/master/textures/sun.jpg',
+  rotationPeriod: 27 // Average rotation period of the Sun in days
 });
 
-INITIAL_BODIES.push(createPlanet('Mercury', 0.055, 22, 0.8, '#B5B5B5'));
-INITIAL_BODIES.push(createPlanet('Venus', 0.815, 38, 1.4, '#E8CDa2'));
-INITIAL_BODIES.push(createPlanet('Earth', 1.0, 55, 1.5, '#2E86AB'));
-INITIAL_BODIES.push(createPlanet('Mars', 0.107, 75, 1.0, '#C1440E'));
-INITIAL_BODIES.push(createPlanet('Jupiter', 317.8, 130, 5.0, '#C88B3A'));
-INITIAL_BODIES.push(createPlanet('Saturn', 95.2, 180, 4.2, '#E4D191', true));
-INITIAL_BODIES.push(createPlanet('Uranus', 14.5, 230, 2.5, '#B2EEF4'));
-INITIAL_BODIES.push(createPlanet('Neptune', 17.1, 275, 2.4, '#3F54BA'));
+// Sidereal rotation periods in Earth Days
+INITIAL_BODIES.push(createPlanet('Mercury', 0.055, 22, 0.8, '#B5B5B5', 58.6));
+INITIAL_BODIES.push(createPlanet('Venus', 0.815, 38, 1.4, '#E8CDa2', -243)); // Retrograde
+INITIAL_BODIES.push(createPlanet('Earth', 1.0, 55, 1.5, '#2E86AB', 1.0));
+INITIAL_BODIES.push(createPlanet('Mars', 0.107, 75, 1.0, '#C1440E', 1.03));
+INITIAL_BODIES.push(createPlanet('Jupiter', 317.8, 130, 5.0, '#C88B3A', 0.41));
+INITIAL_BODIES.push(createPlanet('Saturn', 95.2, 180, 4.2, '#E4D191', 0.45, true));
+INITIAL_BODIES.push(createPlanet('Uranus', 14.5, 230, 2.5, '#B2EEF4', -0.72)); // Retrograde
+INITIAL_BODIES.push(createPlanet('Neptune', 17.1, 275, 2.4, '#3F54BA', 0.67));

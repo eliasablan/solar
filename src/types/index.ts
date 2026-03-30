@@ -14,4 +14,5 @@ export interface CelestialBody {
   texturePath?: string;
   ringTexturePath?: string;
   hasRings?: boolean;
+  rotationPeriod: number; // Period in Earth Days
 }

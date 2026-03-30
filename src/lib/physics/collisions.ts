@@ -81,7 +81,8 @@ export function handleCollisions(bodies: CelestialBody[]): { newBodies: Celestia
                 type: 'debris',
                 density: fDensity,
                 color: Math.random() > 0.5 ? b1.color : b2.color,
-                isAlive: true
+                isAlive: true,
+                rotationPeriod: 0.1 + Math.random() * 0.5 // Fast chaotic rotation for fragments
               });
             }
           }

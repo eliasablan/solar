@@ -57,7 +57,8 @@ export function LauncherPanel({
       type: 'asteroid',
       density,
       color,
-      isAlive: true
+      isAlive: true,
+      rotationPeriod: 1.0 // Asteroids rotate roughly once per day
     };
 
     onLaunch(newBody);

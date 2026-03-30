@@ -127,12 +127,15 @@ export default function SolarSimulator() {
         </div>
       </div>
 
-      {/* 4. Status Card (Móvil - Solo visible cuando el menú está cerrado) */}
+      {/* 4. Time Controls (Móvil - Solo visible cuando el menú está cerrado) */}
       {!isMobileMenuOpen && (
-        <div className="md:hidden absolute bottom-4 right-4">
-          <StatusCard 
-            timeScale={timeScale}
-            simTime={simTime}
+        <div className="md:hidden absolute bottom-4 right-4 pointer-events-auto">
+          <TimeControls 
+            isPaused={isPaused} 
+            setIsPaused={setIsPaused} 
+            timeScale={timeScale} 
+            setTimeScale={setTimeScale} 
+            simTime={simTime} 
           />
         </div>
       )}

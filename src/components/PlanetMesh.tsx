@@ -97,9 +97,15 @@ export const PlanetMesh = memo(function PlanetMesh({ body, onClick, timeScale, i
     if (groupRef.current) {
       groupRef.current.position.set(body.position.x, body.position.y, body.position.z);
       
-      if (!isPaused) {
-        // Rotación axial (simplificada, proporcional al tiempo)
-        groupRef.current.rotation.y += delta * 10 * timeScale;
+      if (!isPaused && body.rotationPeriod !== 0) {
+        // Real-world math:
+        // 1 Earth Day = 0.00221875 sim seconds
+        // Angular velocity (rad/sim_sec) = (2 * PI) / (periodInDays * 0.00221875)
+        const dayInSimSeconds = 0.8104 / 365.25;
+        const angularVelocity = (Math.PI * 2) / (body.rotationPeriod * dayInSimSeconds);
+        
+        // Apply rotation scaled by delta and timeScale
+        groupRef.current.rotation.y += angularVelocity * delta * timeScale;
       }
     }
   });

@@ -91,7 +91,8 @@ export const Scene3D = memo(function Scene3D({
     type: 'asteroid',
     density: 3,
     color: '#ffffff',
-    isAlive: true
+    isAlive: true,
+    rotationPeriod: 1.0
   }, bodies, 200, 1 / 30) : [];
 
   const minZoomDist = selectedBody ? selectedBody.radius * 2.5 : 10;
