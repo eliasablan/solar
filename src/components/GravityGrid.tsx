@@ -11,6 +11,7 @@ const VERTEX_SHADER = `
   uniform float uTime;
   uniform vec3 uBodyPositions[20];
   uniform float uBodyMasses[20];
+  uniform float uBodyRadii[20];
   uniform int uBodyCount;
   
   varying float vDisplacement;
@@ -26,26 +27,29 @@ const VERTEX_SHADER = `
       
       vec3 bodyPos = uBodyPositions[i];
       float mass = uBodyMasses[i];
+      float radius = uBodyRadii[i];
       
       float dist = distance(vec2(position.x, position.y), vec2(bodyPos.x, -bodyPos.z));
       
-      // RESTAURADO: Falloff suave (+5.0) y exponente 1.8 para pozos orgánicos
       float isSun = mass > 500000.0 ? 1.0 : 0.0;
-      float pullFactor = mix(3.0, 0.1, isSun); 
       
-      float displacement = (mass * pullFactor) / (pow(dist, 1.8) + 5.0);
+      // MATEMÁTICA GAUSSIANA MEJORADA:
+      // sigma controla el ancho (proporcional al radio). Ensanchamos planetas para visibilidad.
+      float sigma = radius * mix(3.0, 1.5, isSun);
+      
+      // intensity con escalado balanceado (0.28) para resaltar planetas sin romper el Sol.
+      float intensity = pow(mass, 0.28) * mix(4.0, 1.2, isSun);
+      
+      float displacement = intensity * exp(-0.5 * pow(dist / sigma, 2.0));
       
       totalDisplacement += displacement;
     }
-
-    // Limitamos el desplazamiento total de forma suave
-    totalDisplacement = min(totalDisplacement, 150.0);
 
     newPosition.z -= totalDisplacement;
     vDisplacement = totalDisplacement;
     
     gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
-    gl_PointSize = 1.5; // Puntos más pequeños y elegantes
+    gl_PointSize = 1.2;
   }
 `;
 
@@ -54,19 +58,16 @@ const FRAGMENT_SHADER = `
   varying vec2 vUv;
 
   void main() {
-    // REJILLA DE LÍNEAS FINAS: Dibujamos líneas continuas en lugar de puntos
     float lineX = step(0.99, sin(vUv.x * 80.0));
     float lineY = step(0.99, sin(vUv.y * 80.0));
     float gridLines = max(lineX, lineY);
 
-    // Colores originales azul/cian
     vec3 baseColor = vec3(0.0, 0.05, 0.3); 
     vec3 glowColor = vec3(0.0, 0.7, 1.0); 
     
-    float depthFactor = clamp(vDisplacement / 30.0, 0.0, 1.0);
+    float depthFactor = clamp(vDisplacement / 40.0, 0.0, 1.0);
     vec3 color = mix(baseColor, glowColor, depthFactor);
     
-    // Añadir líneas de rejilla sutiles
     color += gridLines * 0.2;
 
     gl_FragColor = vec4(color, 0.3 + (depthFactor * 0.3));
@@ -81,6 +82,7 @@ export function GravityGrid({ bodies }: Props) {
     uTime: { value: 0 },
     uBodyPositions: { value: new Array(20).fill(new THREE.Vector3()) },
     uBodyMasses: { value: new Array(20).fill(0) },
+    uBodyRadii: { value: new Array(20).fill(0) },
     uBodyCount: { value: 0 }
   }), []);
 
@@ -97,25 +99,26 @@ export function GravityGrid({ bodies }: Props) {
 
     const positions = new Array(20).fill(new THREE.Vector3());
     const masses = new Array(20).fill(0);
+    const radii = new Array(20).fill(0);
 
     activeBodies.forEach((body, i) => {
       positions[i] = body.position;
       masses[i] = body.mass;
+      radii[i] = body.radius;
     });
 
     mat.uniforms.uBodyPositions.value = positions;
     mat.uniforms.uBodyMasses.value = masses;
+    mat.uniforms.uBodyRadii.value = radii;
     mat.uniforms.uBodyCount.value = activeBodies.length;
     
     (pointsRef.current.material as THREE.ShaderMaterial).uniforms = mat.uniforms;
   });
 
-  // Resolución aumentada para una rejilla más densa y suave
   const geometry = useMemo(() => new THREE.PlaneGeometry(650, 650, 200, 200), []);
 
   return (
-    <group rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}>
-      {/* El tejido (malla con líneas) */}
+    <group rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.2, 0]}>
       <mesh ref={meshRef} geometry={geometry}>
         <shaderMaterial
           vertexShader={VERTEX_SHADER}
@@ -127,7 +130,6 @@ export function GravityGrid({ bodies }: Props) {
         />
       </mesh>
       
-      {/* Las partículas (estrellas de la rejilla) */}
       <points ref={pointsRef} geometry={geometry}>
         <shaderMaterial
           vertexShader={VERTEX_SHADER}
