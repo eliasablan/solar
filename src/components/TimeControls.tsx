@@ -7,10 +7,21 @@ interface Props {
   timeScale: number;
   setTimeScale: (val: number) => void;
   simTime: number;
+  stepBack: () => void;
+  stepForward: () => void;
   className?: string;
 }
 
-export function TimeControls({ isPaused, setIsPaused, timeScale, setTimeScale, simTime, className = "" }: Props) {
+export function TimeControls({ 
+  isPaused, 
+  setIsPaused, 
+  timeScale, 
+  setTimeScale, 
+  simTime, 
+  stepBack,
+  stepForward,
+  className = "" 
+}: Props) {
   const [speedMultiplier, setSpeedSlider] = useState(1);
   const [direction, setDirection] = useState(1); // 1 for forward, -1 for reverse
 
@@ -107,32 +118,65 @@ export function TimeControls({ isPaused, setIsPaused, timeScale, setTimeScale, s
           </div>
 
           <div className="flex justify-center gap-2 pt-2 border-t border-gray-800">
-            <button
-              onClick={() => toggleDirection(-1)}
-              className={`p-2 rounded flex-1 flex justify-center items-center transition-all ${direction === -1 ? 'bg-orange-600 shadow-inner' : 'bg-gray-700 hover:bg-gray-600'}`}
-              title="Reverse Time"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="15 18 9 12 15 6"></polyline>
-              </svg>
-            </button>
-            
-            <button
-              onClick={() => setIsPaused(!isPaused)}
-              className={`p-2 rounded flex-1 font-bold transition-all ${isPaused ? 'bg-green-600 hover:bg-green-500 active:scale-95' : 'bg-red-600 hover:opacity-80 active:scale-95'}`}
-            >
-              {isPaused ? '▶ PLAY' : '⏸ PAUSE'}
-            </button>
+            {isPaused ? (
+              <>
+                <button
+                  onClick={stepBack}
+                  className="p-2 rounded flex-1 flex justify-center items-center bg-gray-800 hover:bg-gray-700 transition-all group"
+                  title="Step Back"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="group-active:scale-90 transition-transform">
+                    <polygon points="19 20 9 12 19 4 19 20"></polygon>
+                    <line x1="5" y1="19" x2="5" y2="5"></line>
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setIsPaused(!isPaused)}
+                  className="p-2 rounded flex-1 font-bold transition-all bg-green-600 hover:bg-green-500 active:scale-95"
+                >
+                  ▶ PLAY
+                </button>
+                <button
+                  onClick={stepForward}
+                  className="p-2 rounded flex-1 flex justify-center items-center bg-gray-800 hover:bg-gray-700 transition-all group"
+                  title="Step Forward"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="group-active:scale-90 transition-transform">
+                    <polygon points="5 4 15 12 5 20 5 4"></polygon>
+                    <line x1="19" y1="5" x2="19" y2="19"></line>
+                  </svg>
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => toggleDirection(-1)}
+                  className={`p-2 rounded flex-1 flex justify-center items-center transition-all ${direction === -1 ? 'bg-orange-600 shadow-inner' : 'bg-gray-700 hover:bg-gray-600'}`}
+                  title="Reverse Time"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                </button>
+                
+                <button
+                  onClick={() => setIsPaused(!isPaused)}
+                  className="p-2 rounded flex-1 font-bold transition-all bg-red-600 hover:opacity-80 active:scale-95"
+                >
+                  ⏸ PAUSE
+                </button>
 
-            <button
-              onClick={() => toggleDirection(1)}
-              className={`p-2 rounded flex-1 flex justify-center items-center transition-all ${direction === 1 ? 'bg-blue-600 shadow-inner' : 'bg-gray-700 hover:bg-gray-600'}`}
-              title="Forward Time"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6"></polyline>
-              </svg>
-            </button>
+                <button
+                  onClick={() => toggleDirection(1)}
+                  className={`p-2 rounded flex-1 flex justify-center items-center transition-all ${direction === 1 ? 'bg-blue-600 shadow-inner' : 'bg-gray-700 hover:bg-gray-600'}`}
+                  title="Forward Time"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              </>
+            )}
           </div>
         </div>
       </Card>

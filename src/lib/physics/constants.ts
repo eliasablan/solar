@@ -4,9 +4,29 @@ import { CelestialBody } from '../../types';
 export const G = 10;
 export const SOFTENING = 0.5;
 
-export const INITIAL_BODIES: CelestialBody[] = [];
+export const AU_TO_SIM = 55;
+export const SUN_MASS = 1000000;
 
-const SUN_MASS = 1000000;
+export interface OrbitalElements {
+  a: number; // Semi-major axis (AU)
+  e: number; // Eccentricity
+  L: number; // Mean Longitude (degrees)
+  p: number; // Longitude of perihelion (degrees)
+  i: number; // Inclination (degrees)
+}
+
+export const J2000_PLANETS: Record<string, OrbitalElements> = {
+  mercury: { a: 0.387098, e: 0.205630, L: 252.25084, p: 77.45779, i: 7.00559 },
+  venus: { a: 0.723332, e: 0.006773, L: 181.97906, p: 131.53298, i: 3.39471 },
+  earth: { a: 1.000000, e: 0.016710, L: 100.46435, p: 102.94719, i: 0.00005 },
+  mars: { a: 1.523662, e: 0.093412, L: 355.45332, p: 336.04084, i: 1.85061 },
+  jupiter: { a: 5.203363, e: 0.048393, L: 34.40438, p: 14.75385, i: 1.30530 },
+  saturn: { a: 9.537070, e: 0.054151, L: 49.94432, p: 92.43194, i: 2.48446 },
+  uranus: { a: 19.19126, e: 0.047168, L: 313.23218, p: 170.96424, i: 0.76986 },
+  neptune: { a: 30.06896, e: 0.008586, L: 304.88003, p: 44.97135, i: 1.76917 },
+};
+
+export const INITIAL_BODIES: CelestialBody[] = [];
 
 function createPlanet(
   name: string,

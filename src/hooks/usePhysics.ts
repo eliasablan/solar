@@ -2,16 +2,27 @@ import { useRef, useState, useEffect } from 'react';
 import * as THREE from 'three';
 import { CelestialBody } from '../types';
 import { INITIAL_BODIES } from '../lib/physics/constants';
-import { computeAccelerations, stepSimulation } from '../lib/physics/engine';
+import { computeAccelerations, stepSimulation, getPlanetaryState } from '../lib/physics/engine';
 
 export function usePhysics() {
-  const [bodies, setBodies] = useState<CelestialBody[]>(() => 
-    INITIAL_BODIES.map(b => ({
-      ...b,
-      position: b.position.clone(),
-      velocity: b.velocity.clone()
-    }))
-  );
+  const [bodies, setBodies] = useState<CelestialBody[]>(() => {
+    const now = new Date();
+    return INITIAL_BODIES.map(b => {
+      if (b.type === 'planet') {
+        const { position, velocity } = getPlanetaryState(b.name, now);
+        return {
+          ...b,
+          position,
+          velocity
+        };
+      }
+      return {
+        ...b,
+        position: b.position.clone(),
+        velocity: b.velocity.clone()
+      };
+    });
+  });
   
   const [explosions, setExplosions] = useState<{ id: string, position: THREE.Vector3, time: number }[]>([]);
   // 1 Earth Year = 0.8104 sim seconds. Default to 1 Month/sec.
@@ -23,6 +34,9 @@ export function usePhysics() {
   const lastFrameTimeRef = useRef<number>(performance.now());
   const requestRef = useRef<number>(0);
   const timeRef = useRef<number>(0);
+  const historyRef = useRef<{ bodies: CelestialBody[], simTime: number }[]>([]);
+  const futureRef = useRef<{ bodies: CelestialBody[], simTime: number }[]>([]);
+  const lastSnapshotTimeRef = useRef<number>(performance.now());
 
   useEffect(() => {
     accelerationsRef.current = computeAccelerations(bodiesRef.current);
@@ -33,6 +47,29 @@ export function usePhysics() {
     lastFrameTimeRef.current = time;
 
     if (!isPaused) {
+      // Snapshot logic: take a snapshot every 100ms (approx 6 frames at 60fps)
+      const now = performance.now();
+      if (now - lastSnapshotTimeRef.current >= 100) {
+        lastSnapshotTimeRef.current = now;
+        historyRef.current.push({
+          bodies: bodiesRef.current.map(b => ({
+            ...b,
+            position: b.position.clone(),
+            velocity: b.velocity.clone()
+          })),
+          simTime: timeRef.current
+        });
+        
+        if (historyRef.current.length > 600) {
+          historyRef.current.shift();
+        }
+        
+        // If we resumed from a rewind, clear future history
+        if (futureRef.current.length > 0) {
+          futureRef.current = [];
+        }
+      }
+
       const maxDt = 1 / 30;
       const dt = Math.min(deltaTimeMs / 1000, maxDt) * timeScale;
       
@@ -105,6 +142,50 @@ export function usePhysics() {
     setBodies([...newBodies]);
   };
 
+  const stepBack = () => {
+    if (historyRef.current.length === 0) return;
+    
+    // Save current to future before jumping back
+    futureRef.current.push({
+      bodies: bodiesRef.current.map(b => ({
+        ...b,
+        position: b.position.clone(),
+        velocity: b.velocity.clone()
+      })),
+      simTime: timeRef.current
+    });
+    
+    const snapshot = historyRef.current.pop()!;
+    bodiesRef.current = snapshot.bodies;
+    timeRef.current = snapshot.simTime;
+    accelerationsRef.current = computeAccelerations(snapshot.bodies);
+    
+    // Update state to trigger re-render
+    setBodies(snapshot.bodies.map(b => ({ ...b, position: b.position.clone() })));
+  };
+
+  const stepForward = () => {
+    if (futureRef.current.length === 0) return;
+    
+    // Save current to history before jumping forward
+    historyRef.current.push({
+      bodies: bodiesRef.current.map(b => ({
+        ...b,
+        position: b.position.clone(),
+        velocity: b.velocity.clone()
+      })),
+      simTime: timeRef.current
+    });
+    
+    const snapshot = futureRef.current.pop()!;
+    bodiesRef.current = snapshot.bodies;
+    timeRef.current = snapshot.simTime;
+    accelerationsRef.current = computeAccelerations(snapshot.bodies);
+    
+    // Update state to trigger re-render
+    setBodies(snapshot.bodies.map(b => ({ ...b, position: b.position.clone() })));
+  };
+
   return {
     bodies,
     explosions,
@@ -113,6 +194,8 @@ export function usePhysics() {
     timeScale,
     setTimeScale,
     simTime: timeRef.current,
-    addBody
+    addBody,
+    stepBack,
+    stepForward
   };
 }

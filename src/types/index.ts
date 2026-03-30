@@ -11,6 +11,7 @@ export interface CelestialBody {
   density: number;            // g/cm³ (affects visual scale relative to mass)
   color: string;
   isAlive: boolean;
+  targetPlanetId?: string;
   texturePath?: string;
   ringTexturePath?: string;
   hasRings?: boolean;

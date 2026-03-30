@@ -39,6 +39,25 @@ export const Scene3D = memo(function Scene3D({
 }: Props) {
   const { camera, scene, pointer, raycaster } = useThree();
   const controlsRef = useRef<any>(null);
+  const isResetting = useRef(false);
+  const keysPressed = useRef<{ [key: string]: boolean }>({});
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      keysPressed.current[e.key.toLowerCase()] = true;
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      keysPressed.current[e.key.toLowerCase()] = false;
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
+
+  const minZoomDist = selectedBody ? selectedBody.radius * 2.5 : 10;
 
   useEffect(() => {
     if (cameraMode === 'top') {
@@ -47,17 +66,119 @@ export const Scene3D = memo(function Scene3D({
       camera.up.set(0, 0, -1);
       if (controlsRef.current) controlsRef.current.target.set(0, 0, 0);
     } else if (cameraMode === 'free' && !selectedBody) {
-      camera.position.set(0, 150, 300);
-      camera.lookAt(0, 0, 0);
-      if (controlsRef.current) controlsRef.current.target.set(0, 0, 0);
+      isResetting.current = true;
     }
   }, [cameraMode, camera, selectedBody]);
 
-  useFrame(() => {
+  useFrame((state, delta) => {
     if (cameraMode === 'follow' && selectedBody) {
       const body = bodies.find(b => b.id === selectedBody.id);
       if (body && controlsRef.current) {
         controlsRef.current.target.copy(body.position);
+      }
+    } else if (isResetting.current && cameraMode === 'free' && !selectedBody) {
+      const targetPos = new THREE.Vector3(0, 150, 300);
+      const targetLookAt = new THREE.Vector3(0, 0, 0);
+      const targetUp = new THREE.Vector3(0, 1, 0);
+      
+      // Smoothly move camera
+      camera.position.lerp(targetPos, 5 * delta);
+      camera.up.lerp(targetUp, 5 * delta);
+      
+      // Smoothly move controls target
+      if (controlsRef.current) {
+        controlsRef.current.target.lerp(targetLookAt, 5 * delta);
+      }
+
+      // Stop resetting when close enough
+      if (camera.position.distanceTo(targetPos) < 0.1 && 
+          controlsRef.current?.target.distanceTo(targetLookAt) < 0.1) {
+        isResetting.current = false;
+        camera.position.copy(targetPos);
+        camera.up.copy(targetUp);
+        if (controlsRef.current) {
+          controlsRef.current.target.copy(targetLookAt);
+          controlsRef.current.update();
+        }
+      }
+    }
+
+    // Keyboard controls (WASD + QE + RF + IO)
+    const isControlMode = cameraMode === 'free' || cameraMode === 'follow';
+    if (isControlMode && !isResetting.current) {
+      const keys = keysPressed.current;
+      const panSpeed = 50; // units per second
+      const rotateSpeed = 1.5; // radians per second
+      const zoomSpeed = 1.5; // 150% per second for much faster zoom
+
+      // Pan (WASD) - Only in Free mode, or switch to Free if used in Follow
+      if (keys['w'] || keys['s'] || keys['a'] || keys['d']) {
+        if (cameraMode === 'follow') {
+          onSelectBody(null);
+        } else {
+          const panVector = new THREE.Vector3();
+          const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+          const up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+          
+          if (keys['w']) panVector.add(up);
+          if (keys['s']) panVector.sub(up);
+          if (keys['a']) panVector.sub(right);
+          if (keys['d']) panVector.add(right);
+          
+          if (panVector.lengthSq() > 0) {
+            panVector.normalize().multiplyScalar(panSpeed * delta);
+            camera.position.add(panVector);
+            if (controlsRef.current) {
+              controlsRef.current.target.add(panVector);
+              controlsRef.current.update();
+            }
+          }
+        }
+      }
+
+      // Rotate Yaw (QE) and Pitch (RF) around the target
+      if (keys['q'] || keys['e'] || keys['r'] || keys['f']) {
+        const target = controlsRef.current?.target || new THREE.Vector3(0, 0, 0);
+        let relPos = camera.position.clone().sub(target);
+        
+        // Yaw (Y-axis)
+        if (keys['q'] || keys['e']) {
+          const yawAngle = rotateSpeed * delta * (keys['q'] ? 1 : -1);
+          relPos.applyAxisAngle(new THREE.Vector3(0, 1, 0), yawAngle);
+        }
+        
+        // Pitch (Local X-axis)
+        if (keys['r'] || keys['f']) {
+          const pitchAngle = rotateSpeed * delta * (keys['r'] ? 1 : -1);
+          const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+          relPos.applyAxisAngle(right, pitchAngle);
+        }
+        
+        camera.position.copy(target).add(relPos);
+        
+        if (controlsRef.current) {
+          controlsRef.current.update();
+        }
+      }
+
+      // Zoom (IO)
+      if (keys['i'] || keys['o']) {
+        const camDir = new THREE.Vector3();
+        camera.getWorldDirection(camDir);
+        const target = controlsRef.current?.target || new THREE.Vector3(0, 0, 0);
+        const distance = camera.position.distanceTo(target);
+        
+        // Base zoom on distance so it feels natural, but with a minimum step
+        const zoomAmount = Math.max(distance, 10) * zoomSpeed * delta;
+        
+        if (keys['i'] && distance > minZoomDist + zoomAmount) {
+          camera.position.addScaledVector(camDir, zoomAmount);
+          if (controlsRef.current) controlsRef.current.update();
+        }
+        if (keys['o']) {
+          camera.position.addScaledVector(camDir, -zoomAmount);
+          if (controlsRef.current) controlsRef.current.update();
+        }
       }
     }
   });
@@ -95,8 +216,6 @@ export const Scene3D = memo(function Scene3D({
     rotationPeriod: 1.0
   }, bodies, 200, 1 / 30) : [];
 
-  const minZoomDist = selectedBody ? selectedBody.radius * 2.5 : 10;
-
   return (
     <>
       <OrbitControls 
@@ -105,18 +224,18 @@ export const Scene3D = memo(function Scene3D({
         enableDamping 
         dampingFactor={0.05} 
         minDistance={minZoomDist}
-        maxDistance={4000}
+        maxDistance={10000}
       />
       
       <ambientLight intensity={0.6} />
-      <pointLight position={[0, 0, 0]} intensity={5000} distance={2000} decay={1.5} color="#FDB813" />
+      <pointLight position={[0, 0, 0]} intensity={5000} distance={5000} decay={1.5} color="#FDB813" />
       
-      <Stars radius={300} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
+      <Stars radius={4000} depth={100} count={8000} factor={6} saturation={0} fade speed={1} />
 
       <GravityGrid bodies={bodies} />
 
       <mesh visible={isAiming} onPointerDown={handlePointerDown}>
-        <planeGeometry args={[2000, 2000]} />
+        <planeGeometry args={[5000, 5000]} />
         <meshBasicMaterial visible={false} />
       </mesh>
 
